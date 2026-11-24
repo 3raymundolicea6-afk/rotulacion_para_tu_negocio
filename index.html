@@ -450,32 +450,30 @@
     observador.observe(el);
   });
 
-  // La página se mueve solita: baja y sube despacio. Si la persona
-  // toca, recorre o usa el teclado, se detiene y retoma a los pocos
-  // segundos de soltar. No se mueve con el visor abierto.
+  // La página se mueve solita, pantalla por pantalla: cada 5 segundos
+  // avanza una pantalla completa, con un deslizamiento suave. Al llegar
+  // al final vuelve arriba y empieza de nuevo. Si la persona toca,
+  // recorre o usa el teclado, se detiene y retoma a los pocos segundos
+  // de soltar. No se mueve con el visor abierto.
   (function(){
     if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    var pausaHasta = 0, direccion = 1, ultimo = 0;
-    var RETOMAR_MS = 3000, VELOCIDAD = 0.06; // px por ms, ~60 px/s
+    var pausaHasta = 0;
+    var RETOMAR_MS = 3000, PASO_MS = 5000;
     function interactuo(){ pausaHasta = performance.now() + RETOMAR_MS; }
     ['touchstart', 'pointerdown', 'mousedown', 'wheel', 'keydown'].forEach(function(ev){
       window.addEventListener(ev, interactuo, {passive: true});
     });
-    function paso(ahora){
-      var dt = ahora - ultimo; ultimo = ahora;
-      if(dt > 0 && dt < 100){
-        var visorAbierto = document.getElementById('visor').classList.contains('abierto');
-        if(!document.hidden && !visorAbierto && ahora >= pausaHasta){
-          var max = document.documentElement.scrollHeight - window.innerHeight;
-          var y = window.scrollY + direccion * VELOCIDAD * dt;
-          if(y >= max){ y = max; direccion = -1; }
-          if(y <= 0){ y = 0; direccion = 1; }
-          window.scrollTo({top: y, left: 0, behavior: 'instant'});
-        }
+    function siguiente(){
+      var visorAbierto = document.getElementById('visor').classList.contains('abierto');
+      if(!document.hidden && !visorAbierto && performance.now() >= pausaHasta){
+        var max = document.documentElement.scrollHeight - window.innerHeight;
+        var y = Math.min(window.scrollY + window.innerHeight, max);
+        if(y <= window.scrollY){ y = 0; }
+        window.scrollTo({top: y, left: 0, behavior: 'smooth'});
       }
-      requestAnimationFrame(paso);
+      setTimeout(siguiente, PASO_MS);
     }
-    setTimeout(function(){ ultimo = performance.now(); requestAnimationFrame(paso); }, 2500);
+    setTimeout(siguiente, 2500);
   })();
 
   // Música de fondo: Bonito, Bonito desde el coro, en bucle.
